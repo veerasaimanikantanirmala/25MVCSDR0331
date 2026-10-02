@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>College Event Scheduler</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f7fb;--card:#fff;--tx:#1b1f2a;--mu:#667085;--bd:#dfe3ec;--ac:#4f46e5;--ok:#16a34a;--er:#dc2626}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12141c;--card:#1c2030;--tx:#e8eaf2;--mu:#98a1b5;--bd:#2c3248;--ac:#818cf8;--ok:#4ade80;--er:#f87171}}
+:root[data-theme="dark"]{--bg:#12141c;--card:#1c2030;--tx:#e8eaf2;--mu:#98a1b5;--bd:#2c3248;--ac:#818cf8;--ok:#4ade80;--er:#f87171}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1100px;margin:auto;padding:16px}
+h1{font-size:22px;margin:0 0 2px}h2{font-size:15px;margin:0 0 10px}
+.sub{color:var(--mu);margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+input,select,button{font:inherit;padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);min-width:0}
+input{flex:1 1 90px}
+button{cursor:pointer;background:var(--ac);color:#fff;border:0;font-weight:600}
+button.g{background:transparent;color:var(--mu);border:1px solid var(--bd)}
+button.x{background:none;color:var(--er);padding:2px 6px}
+.item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bd);gap:6px}
+.item small{color:var(--mu)}
+.eq{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.eq label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--mu)}.eq input{width:52px;flex:none;padding:4px 6px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.stat{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px 12px}
+.stat b{display:block;font-size:18px}.stat span{color:var(--mu);font-size:12px}
+.tw{overflow-x:auto;margin-bottom:12px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:12px}
+th,td{border:1px solid var(--bd);padding:3px 4px;text-align:center;height:30px}
+th{background:var(--bg);color:var(--mu);font-weight:600}
+td.ev{color:#fff;font-weight:600;font-size:11px}
+.bad{color:var(--er)}.good{color:var(--ok)}
+.tag{font-size:11px;border-radius:99px;padding:1px 7px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)}
+</style></head><body><main>
+<h1>📅 College Event Scheduler</h1>
+<p class="sub">Backtracking solver that assigns events to rooms and time slots (Mon–Fri, 9:00–17:00) without room or equipment clashes.</p>
+
+<div class="grid">
+ <div class="card"><h2>Rooms</h2>
+  <div class="row"><input id="rn" placeholder="Name"><select id="rt"><option>Classroom</option><option>Seminar Hall</option><option>Lab</option></select><input id="rc" type="number" placeholder="Capacity" min="1"><button onclick="addRoom()">Add</button></div>
+  <div id="rooms"></div></div>
+ <div class="card"><h2>Equipment (shared pool)</h2>
+  <div class="row"><input id="en" placeholder="Name"><input id="eqty" type="number" placeholder="Quantity" min="1"><button onclick="addEq()">Add</button></div>
+  <div id="equip"></div></div>
+</div>
+
+<div class="card" style="margin-bottom:14px"><h2>Add event</h2>
+ <div class="row"><input id="vn" placeholder="Event name" style="flex:2 1 160px"><input id="vd" type="number" min="1" max="8" value="2" title="Duration (hours)" placeholder="Hours"><input id="va" type="number" min="1" value="40" title="Attendees" placeholder="Attendees">
+ <select id="vt"><option>Classroom</option><option>Seminar Hall</option><option>Lab</option></select>
+ <select id="vp"><option value="3">High priority</option><option value="2" selected>Medium priority</option><option value="1">Low priority</option></select></div>
+ <div class="row"><select id="vday"><option value="-1">Any day</option><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option></select>
+ <label class="tag" style="padding:7px">Window <input id="vs" type="number" min="9" max="16" value="9" style="width:55px;flex:none"> to <input id="ve" type="number" min="10" max="17" value="17" style="width:55px;flex:none"></label></div>
+ <div class="eq" id="veq"></div>
+ <button onclick="addEvent()">Add event</button>
+ <div id="events" style="margin-top:10px"></div></div>
+
+<div class="row"><button onclick="run()">▶ Generate schedule</button><button class="g" onclick="sample()">Load sample data</button><button class="g" onclick="clearAll()">Clear events</button></div>
+<div id="out"></div>
+</main>
+<script>
+const DAYS=['Mon','Tue','Wed','Thu','Fri'],H0=9,H1=17,H=H1-H0,COL=['#4f46e5','#0891b2','#059669','#d97706','#db2777','#7c3aed','#dc2626','#0d9488','#65a30d','#9333ea'];
+let rooms=[],equip=[],events=[];
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function addRoom(){const n=$('rn').value.trim(),c=+$('rc').value;if(!n||!c)return;rooms.push({n,t:$('rt').value,c});$('rn').value=$('rc').value='';draw()}
+function addEq(){const n=$('en').value.trim(),q=+$('eqty').value;if(!n||!q)return;equip.push({n,q});$('en').value=$('eqty').value='';draw()}
+function addEvent(){const n=$('vn').value.trim();if(!n)return;const eq={};equip.forEach((e,i)=>{const v=+$('eq'+i).value;if(v>0)eq[e.n]=v});
+ events.push({n,d:+$('vd').value||1,a:+$('va').value||1,t:$('vt').value,p:+$('vp').value,day:+$('vday').value,s:Math.max(H0,+$('vs').value),e:Math.min(H1,+$('ve').value),eq});$('vn').value='';draw()}
+function del(a,i){a.splice(i,1);draw()}
+function clearAll(){events=[];$('out').innerHTML='';draw()}
+function draw(){
+ $('rooms').innerHTML=rooms.map((r,i)=>`<div class="item"><span>${esc(r.n)} <small>${r.t} · cap ${r.c}</small></span><button class="x" onclick="del(rooms,${i})">✕</button></div>`).join('')||'<small>No rooms</small>';
+ $('equip').innerHTML=equip.map((e,i)=>`<div class="item"><span>${esc(e.n)} <small>× ${e.q}</small></span><button class="x" onclick="del(equip,${i})">✕</button></div>`).join('')||'<small>No equipment</small>';
+ $('veq').innerHTML=equip.map((e,i)=>`<label>${esc(e.n)} <input id="eq${i}" type="number" min="0" max="${e.q}" value="0"></label>`).join('');
+ $('events').innerHTML=events.map((v,i)=>`<div class="item"><span><b>${esc(v.n)}</b> <small>${v.d}h · ${v.a} people · ${v.t} · P${v.p} · ${v.day<0?'any day':DAYS[v.day]} ${v.s}-${v.e}${Object.keys(v.eq).length?' · '+Object.entries(v.eq).map(([k,q])=>esc(k)+'×'+q).join(', '):''}</small></span><button class="x" onclick="del(events,${i})">✕</button></div>`).join('')||'<small>No events yet</small>'}
+function sample(){
+ rooms=[{n:'Room 101',t:'Classroom',c:60},{n:'Room 102',t:'Classroom',c:40},{n:'Seminar Hall A',t:'Seminar Hall',c:200},{n:'CS Lab',t:'Lab',c:30}];
+ equip=[{n:'Projector',q:2},{n:'Mic',q:2},{n:'Laptops',q:30}];
+ const E=(n,d,a,t,p,day,s,e,eq)=>({n,d,a,t,p,day,s,e,eq});
+ events=[E('Orientation',3,150,'Seminar Hall',3,0,9,13,{Projector:1,Mic:1}),E('Guest Lecture: AI',2,120,'Seminar Hall',3,0,9,13,{Projector:1,Mic:1}),
+ E('Coding Contest',4,28,'Lab',2,-1,9,17,{Laptops:28}),E('Robotics Workshop',3,30,'Lab',2,-1,9,17,{Laptops:20}),
+ E('Debate Club',2,35,'Classroom',1,1,9,13,{}),E('Photography Talk',2,50,'Classroom',2,-1,9,17,{Projector:1}),
+ E('Alumni Meet',3,180,'Seminar Hall',2,2,9,17,{Mic:2,Projector:1}),E('Placement Prep',2,55,'Classroom',3,-1,9,17,{Projector:1}),
+ E('Quiz Night',2,40,'Classroom',1,-1,13,17,{Mic:1}),E('Hackathon Kickoff',2,25,'Lab',3,0,9,17,{Laptops:25,Projector:1})];
+ draw();run()}
+function solve(){
+ const t0=performance.now(),LIMIT=300000;
+ const occ={},use={};rooms.forEach(r=>occ[r.n]=new Uint8Array(5*H));equip.forEach(e=>use[e.n]=new Uint8Array(5*H));
+ const eqMax={};equip.forEach(e=>eqMax[e.n]=e.q);
+ const items=events.map((v,idx)=>{
+  const c=[];
+  if(Object.entries(v.eq).every(([k,q])=>eqMax[k]!==undefined&&eqMax[k]>=q))
+   for(const r of rooms)if(r.t===v.t&&r.c>=v.a)for(let d=0;d<5;d++)if(v.day<0||v.day===d)for(let s=v.s;s+v.d<=v.e;s++)c.push([r.n,d,s]);
+  return {v,idx,c}}).sort((a,b)=>a.c.length-b.c.length||b.v.p-a.v.p);
+ const fits=(v,[r,d,s])=>{for(let h=s;h<s+v.d;h++){const k=d*H+h-H0;if(occ[r][k])return false;for(const q in v.eq)if(use[q][k]+v.eq[q]>eqMax[q])return false}return true};
+ const put=(v,[r,d,s],x)=>{for(let h=s;h<s+v.d;h++){const k=d*H+h-H0;occ[r][k]=x?1:0;for(const q in v.eq)use[q][k]+=x?v.eq[q]:-v.eq[q]}};
+ const total=items.reduce((a,i)=>a+i.v.p,0);
+ let best={sc:-1,as:null},nodes=0,backs=0,cur=new Array(items.length).fill(null),stop=false;
+ (function rec(i,sc,rem){
+  if(stop)return;
+  if(i===items.length){if(sc>best.sc)best={sc,as:cur.slice()};if(sc===total)stop=true;return}
+  if(sc+rem<=best.sc)return;
+  if(++nodes>LIMIT){stop=true;return}
+  const it=items[i],w=it.v.p;
+  for(const c of it.c){if(fits(it.v,c)){put(it.v,c,1);cur[i]=c;rec(i+1,sc+w,rem-w);put(it.v,c,0);cur[i]=null;if(stop)return;backs++}}
+  rec(i+1,sc,rem-w)})(0,0,total);
+ return {items,best,total,nodes,backs,ms:performance.now()-t0,capped:nodes>LIMIT}}
+function run(){
+ if(!events.length||!rooms.length){$('out').innerHTML='<p class="bad">Add at least one room and one event.</p>';return}
+ const R=solve(),as=R.best.as,done=as.filter(Boolean).length,n=R.items.length;
+ const colOf={};R.items.forEach((it,i)=>colOf[i]=COL[it.idx%COL.length]);
+ const grids={};rooms.forEach(r=>grids[r.n]=Array.from({length:H},()=>Array(5).fill(null)));
+ as.forEach((c,i)=>{if(!c)return;const v=R.items[i].v;for(let h=c[2];h<c[2]+v.d;h++)grids[c[0]][h-H0][c[1]]={i,first:h===c[2],v}});
+ let html=`<div class="card"><h2>Result ${done===n?'<span class="good">✔ All events scheduled</span>':'<span class="bad">⚠ Best partial schedule</span>'}</h2>
+ <div class="stats"><div class="stat"><b>${done}/${n}</b><span>Events scheduled</span></div><div class="stat"><b>${R.nodes}</b><span>Nodes explored</span></div><div class="stat"><b>${R.backs}</b><span>Backtracks</span></div><div class="stat"><b>${R.ms.toFixed(1)} ms</b><span>Solve time</span></div></div>
+ ${R.capped?'<p class="bad">Search limit reached; showing best found.</p>':''}`;
+ for(const r of rooms){html+=`<h2>${esc(r.n)} <span class="tag">${r.t} · ${r.c}</span></h2><div class="tw"><table><tr><th></th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr>`;
+  for(let h=0;h<H;h++){html+=`<tr><th>${H0+h}:00</th>`;for(let d=0;d<5;d++){const c=grids[r.n][h][d];html+=c?`<td class="ev" style="background:${colOf[c.i]}">${c.first?esc(c.v.n):''}</td>`:'<td></td>'}html+='</tr>'}html+='</table></div>'}
+ html+='<h2>Event details</h2>';
+ R.items.forEach((it,i)=>{const c=as[i];html+=`<div class="item"><span><b>${esc(it.v.n)}</b> <small>${c?`${esc(c[0])} · ${DAYS[c[1]]} ${c[2]}:00–${c[2]+it.v.d}:00`:''}</small></span>${c?'<span class="tag good">Scheduled</span>':`<span class="tag bad">${it.c.length?'Unscheduled: conflicts with other events':'Unscheduled: no room/equipment fits'}</span>`}</div>`});
+ $('out').innerHTML=html+'</div>'}
+draw();sample();
+</script></body></html>
